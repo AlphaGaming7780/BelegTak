@@ -24,6 +24,7 @@ import java.awt.Point;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Stack;
 
@@ -33,7 +34,7 @@ import java.util.Stack;
  *
  * @author Belegkarnil
  */
-public class Board{
+public class Board implements Cloneable{
 	public static enum Size{
 		/** Define a size of a tiny board according to the official rules */
 		TINY(3),
@@ -104,6 +105,22 @@ public class Board{
 		for(int i = 0; i < size.length; i++){
 			for(int j = 0; j < size.length; j++){
 				this.board[i][j] = new Stack<>();
+			}
+		}
+	}
+
+	/**
+	 * Construct a copy of the current board
+	 * @param board The board to copy
+	 */
+	public Board(Board board){
+		final int size = board.board.length;
+		this.board = new Stack[size][size];
+		this.empty = board.empty;
+		for(int i = 0; i < size; i++){
+			for(int j = 0; j < size; j++){
+				this.board[i][j] = new Stack<>();
+				this.board[i][j].addAll(Arrays.asList(board.getStack(i,j)));
 			}
 		}
 	}
@@ -312,7 +329,7 @@ public class Board{
 	 * @return true iff the move is valid, false otherwise
 	 */
 	public boolean canMove(Color player,Point src, int[] amount, Point dst){
-		return canMove(player,src.y,src.x,amount,dst.y,dst.x);
+		return canMove(player, src.y, src.x, amount, dst.y, dst.x);
 	}
 
 	/**
@@ -351,11 +368,14 @@ public class Board{
 		final boolean topStackIsCapstone = board[srcRow][srcColumn].peek().isCapstone();
 		if(srcRow == dstRow){
 			if(srcColumn == dstColumn) return false;// no move
-			final int moves = dstColumn - srcColumn;
+			int moves = dstColumn - srcColumn;
 			if(Math.abs(moves) != amount.length) return false;
 			final int sign = moves < 0 ? -1 : 1;
-			int i;
-			for(i = 1; i < Math.abs(moves); i += sign){
+			int i = 0;
+			moves = Math.abs(moves);
+			while(moves>1){
+				i +=sign;
+				moves--;
 				if(!board[srcRow][srcColumn + i].empty() && !board[srcRow][srcColumn + i].peek().isDolmen()) return false;
 			}
 			if(board[dstRow][dstColumn].empty()) return true;
@@ -365,11 +385,14 @@ public class Board{
 		}
 		if(srcColumn == dstColumn){
 			if(srcRow == dstRow) return false;// no move
-			final int moves = dstRow - srcRow;
+			int moves = dstRow - srcRow;
 			if(Math.abs(moves) != amount.length) return false;
 			final int sign = moves < 0 ? -1 : 1;
-			int i;
-			for(i = 1; i < Math.abs(moves); i += sign){
+			int i = 0;
+			moves = Math.abs(moves);
+			while(moves>1){
+				i +=sign;
+				moves--;
 				if(!board[srcRow + i][srcColumn].empty() && !board[srcRow][srcColumn + i].peek().isDolmen()) return false;
 			}
 			if(board[dstRow][dstColumn].empty()) return true;
@@ -417,8 +440,9 @@ public class Board{
 
 		Color firstCompleted = null;
 
+		final int totalCarry = computeAmount(amount);
 		Stack<Piece> stack = new Stack<>();
-		for(int i = 0; i < amount.length; i++){
+		for(int i = 0; i < totalCarry; i++){
 			stack.add(this.board[src.y][src.x].pop());
 		}
 		if(board[src.y][src.x].isEmpty()) this.empty++;
@@ -537,5 +561,14 @@ public class Board{
 	 */
 	public int countInitialStones(){
 		return Size.countInitialStones(getSize());
+	}
+
+	/**
+	 * Clone (see {@link Cloneable}) the current board
+	 * @return A copy of the current boar
+	 */
+	@Override
+	public Board clone(){
+		return new Board(this);
 	}
 }
